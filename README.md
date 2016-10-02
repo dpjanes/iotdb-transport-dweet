@@ -29,7 +29,7 @@ live.
     const iotdb_transporter = iotdb_transport.make({});
 
     // our destination
-    const dweet_transport = require("../transporter")
+    const dweet_transport = require("iotdb-transport-dweet");
     const dweet_transporter = dweet_transport.make();
 
     // connect
