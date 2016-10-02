@@ -6,8 +6,6 @@
 #   2016-10-01
 #
 
-exit 0
-
 PACKAGE=iotdb-transport-dweet
 DIST_ROOT=/var/tmp/.dist.$$
 
