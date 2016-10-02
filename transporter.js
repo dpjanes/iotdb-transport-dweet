@@ -28,6 +28,8 @@ const _ = iotdb._;
 const iotdb_transport = require('iotdb-transport');
 const errors = require('iotdb-errors');
 
+const node_dweetio = require("node-dweetio");
+
 const logger = iotdb.logger({
     name: 'iotdb-transport-dweet',
     module: 'transporter',
@@ -37,7 +39,12 @@ const make = (initd) => {
     const self = iotdb_transport.make();
     self.name = "iotdb-transport-dweet";
 
-    const _initd = _.d.compose.shallow(initd, {});
+    const _initd = _.d.compose.shallow(initd, {
+        bands: [ "model", "meta", "ostate" ]
+    });
+    const _dweetio = new node_dweetio();
+    const _encode = s => s.replace(/[\/$%#.\]\[]/g, c => '%' + c.charCodeAt(0).toString(16));
+
 
     self.rx.list = (observer, d) => {
         observer.onCompleted();
@@ -48,15 +55,31 @@ const make = (initd) => {
     };
 
     self.rx.put = (observer, d) => {
-        observer.onCompleted();
+        if (_initd.bands.indexOf(d.band) === -1) {
+            return observer.onCompleted();
+        }
+
+        const dweet_key = _encode(`${ d.id }/${ d.band }`);
+        dweetio.dweet_for(key, d.value, (error, dweet) => {
+            if (error) {
+                return observer.onError(error);
+            }
+
+            observer.onNext(d);
+            observer.onCompleted();
+        });
     };
     
     self.rx.get = (observer, d) => {
+        observer.onError(new errors.NotFound());
+    };
+
+    self.rx.remove = (observer, d) => {
         observer.onCompleted();
     };
     
     self.rx.bands = (observer, d) => {
-        observer.onCompleted();
+        observer.onError(new errors.NotFound());
     };
 
     self.rx.updated = (observer, d) => {
