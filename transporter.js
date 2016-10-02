@@ -28,7 +28,7 @@ const _ = iotdb._;
 const iotdb_transport = require('iotdb-transport');
 const errors = require('iotdb-errors');
 
-const node_dweetio = require("node-dweetio");
+const unirest = require("unirest");
 
 const logger = iotdb.logger({
     name: 'iotdb-transport-dweet',
@@ -40,11 +40,9 @@ const make = (initd) => {
     self.name = "iotdb-transport-dweet";
 
     const _initd = _.d.compose.shallow(initd, {
-        bands: [ "model", "meta", "ostate" ]
+        bands: [ "istate" ],
     });
-    const _dweetio = new node_dweetio();
-    const _encode = s => s.replace(/[\/$%#.\]\[]/g, c => '%' + c.charCodeAt(0).toString(16));
-
+    const _queue = _.queue("dweet.io");
 
     self.rx.list = (observer, d) => {
         observer.onCompleted();
@@ -55,18 +53,47 @@ const make = (initd) => {
     };
 
     self.rx.put = (observer, d) => {
-        if (_initd.bands.indexOf(d.band) === -1) {
+        if (_initd.bands && (_initd.bands.indexOf(d.band) === -1)) {
             return observer.onCompleted();
         }
 
-        const dweet_key = _encode(`${ d.id }/${ d.band }`);
-        dweetio.dweet_for(key, d.value, (error, dweet) => {
-            if (error) {
-                return observer.onError(error);
-            }
+        _queue.add({
+            run: (queue, qitem) => {
+                const dweet_key = `${ d.id }@${ d.band }`;
+                const dweet_uri = "https://dweet.io/dweet/for/" + dweet_key;
 
-            observer.onNext(d);
-            observer.onCompleted();
+                unirest
+                    .post(dweet_uri)
+                    .json()
+                    .send(d.value)
+                    .end(result => {
+                        if (result.error) {
+                            logger.info({
+                                key: dweet_key,
+                                error: _.error.message(result.error),
+                                id: d.id,
+                                band: d.band,
+                                value: d.value,
+                            }, "error sending dweet");
+
+                            observer.onError(result.error);
+
+                            setTimeout(() => queue.finished(qitem), 1100);
+                            return;
+                        }
+
+                        console.log(result.body);
+
+                        logger.info({
+                            key: dweet_key,
+                        }, "sent dweet");
+
+                        observer.onNext(d);
+                        observer.onCompleted();
+
+                        setTimeout(() => queue.finished(qitem), 1100);
+                    });
+            }
         });
     };
     
@@ -75,7 +102,7 @@ const make = (initd) => {
     };
 
     self.rx.remove = (observer, d) => {
-        observer.onCompleted();
+        observer.onError(new errors.NotImplemented());
     };
     
     self.rx.bands = (observer, d) => {

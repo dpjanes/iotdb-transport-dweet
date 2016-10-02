@@ -1,9 +1,7 @@
 const iotdb = require("iotdb");
 const _ = iotdb._;
 
-const dweetClient = require("node-dweetio");
-const dweetio = new dweetClient();
-
+const unirest = require("unirest");
 
 var _encode = function (s) {
     return s.replace(/[\/$%#.\]\[]/g, function (c) {
@@ -38,28 +36,19 @@ const payload_earthquake = {
     "@timestamp": _.timestamp.make(),
 }
 
+const uri = "https://dweet.io/dweet/for/" + key;
 
-dweetio.dweet_for(key, payload_earthquake, function(error, dweet){
+unirest
+    .post(uri)
+    .json()
+    .send(payload_earthquake)
+    .end(result => {
+        if (result.error) {
+            console.log("ERROR");
+            console.log(result.error);
+            return;
+        }
 
-    if (error) {
-        console.log("#", _.error.message(error));
-        return;
-    }
- 
-    console.log("+ sent");
-    console.log(dweet.thing); // "my-thing" 
-    console.log(dweet.content); // The content of the dweet 
-    console.log(dweet.created); // The create date of the dweet 
- 
-});
-
-/*
-dweetio.get_all_dweets_for(key, function(err, dweets){
-    dweets.forEach(dweet => {
-        console.log("+ got");
-        console.log(dweet.thing); // "my-thing" 
-        console.log(dweet.content); // The content of the dweet 
-        console.log(dweet.created); // The create date of the dweet 
+        console.log(result.body);
     });
-});
-*/
+
