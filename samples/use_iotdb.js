@@ -1,9 +1,16 @@
 /*
- *  transporter.js
+ *  use_iotdb.js
  *
  *  David Janes
  *  IOTDB.org
- *  2016-08-05
+ *  2016-10-02
+ *
+ *  Demonstrate uploading Earthquakes to Dweet.io 
+ *  using this Transporter.
+ *
+ *  There's sample dashboard 'use_iotdb.dashboard.json'
+ *  that you can load into Deet. You'll have to do some
+ *  editing to get the names of the data source correct
  *
  *  Copyright [2013-2016] [David P. Janes]
  *
@@ -28,17 +35,13 @@ const iotdb = require("iotdb");
 iotdb.use("homestar-feed");
 iotdb.connect("USGSEarthquake");
 
-// our source
+// our source - this automatically picks up everything in IOTDB
 const iotdb_transport = require("iotdb-transport-iotdb");
 const iotdb_transporter = iotdb_transport.make({});
-/*
-iotdb_transporter
-    .updated({})
-    .subscribe(...testers.log_value("iotdb_transporter.updated"));
- */
 
 // our destination
 const dweet_transport = require("../transporter")
-const dweet_1_transporter = dweet_transport.make();
+const dweet_transporter = dweet_transport.make();
 
-dweet_1_transporter.monitor(iotdb_transporter);
+// connect
+dweet_transporter.monitor(iotdb_transporter);
